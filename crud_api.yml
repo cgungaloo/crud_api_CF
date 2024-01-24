@@ -1,0 +1,371 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  pTableName:
+    Type: String
+    Default: articles
+  pAttributeName:
+    Type: String
+    Default: id
+  pGetAllArticles:
+    Type: String
+    Default: "get_all_articles"
+  pGetSingleArticle:
+    Type: String
+    Default: "get_single_article"
+  pCreateArticle:
+    Type: String
+    Default: "create_article"
+  pDeleteArticle:
+    Type: String
+    Default: "delete_article"
+  pUpdateArticle:
+    Type: String
+    Default: "update_article"
+
+Resources:
+  ArticlesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref pTableName
+      AttributeDefinitions:
+        - AttributeName: !Ref pAttributeName
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: !Ref pAttributeName
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ExpirationTime"
+        Enabled: true
+      ProvisionedThroughput:
+        ReadCapacityUnits: "10"
+        WriteCapacityUnits: "5"
+
+  ArticlesCRUDRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "dynamodb.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+  
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Test
+    DependsOn:
+      - AllArticlesLambda
+
+  ArticlesCRUDLogGroupGL:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: "/aws/lambda/articles_grp_gl"
+      RetentionInDays: 7
+
+  AllArticlesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: AllLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Policy_api-lambda-db
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:Scan'
+                Resource: !GetAtt ArticlesTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+
+  SingleArticlesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: SingleArticleLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Policy_api-lambda-db
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:GetItem'
+                Resource: !GetAtt ArticlesTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+  
+  CreateArticlesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: SingleLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Policy_api-lambda-db
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:PutItem'
+                Resource: !GetAtt ArticlesTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+  
+  UpdateArticlesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: UpdateLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Policy_api-lambda-db
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:PutItem'
+                Resource: !GetAtt ArticlesTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+
+  DeleteArticlesRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: DeleteLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Policy_api-lambda-db
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:DeleteItem'
+                Resource: !GetAtt ArticlesTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+
+  AllArticlesLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref pGetAllArticles
+      CodeUri: s3://articlescrudlambdascg/get_all_articles.zip
+      Handler: get_all_articles.lambda_handler
+      Role: !GetAtt AllArticlesRole.Arn
+      Runtime: python3.12
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: get_all_articles
+            Method: GET 
+      Environment:
+        Variables:
+          TableName: !Ref pTableName
+      LoggingConfig:
+        LogGroup: !Ref ArticlesCRUDLogGroupGL
+    DependsOn:
+      - AllArticlesRole
+  
+  GetSingleArticleLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref pGetSingleArticle
+      CodeUri: s3://articlescrudlambdascg/get_single_article.zip
+      Handler: get_single_article.lambda_handler
+      Role: !GetAtt SingleArticlesRole.Arn
+      Runtime: python3.12
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: get_single_article
+            Method: GET 
+      Environment:
+        Variables:
+          TableName: !Ref pTableName
+      LoggingConfig:
+        LogGroup: !Ref ArticlesCRUDLogGroupGL
+    DependsOn:
+      - SingleArticlesRole
+  
+  CreateArticlesLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref pCreateArticle
+      CodeUri: s3://articlescrudlambdascg/create_articles.zip
+      Handler: create_articles.lambda_handler
+      Role: !GetAtt CreateArticlesRole.Arn
+      Runtime: python3.12
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: create_article
+            Method: PUT
+      Environment:
+        Variables:
+          TableName: !Ref pTableName
+      LoggingConfig:
+        LogGroup: !Ref ArticlesCRUDLogGroupGL
+    DependsOn:
+      - CreateArticlesRole
+
+  UpdateArticlesLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref pUpdateArticle
+      CodeUri: s3://articlescrudlambdascg/update_articles.zip
+      Handler: update_articles.lambda_handler
+      Role: !GetAtt UpdateArticlesRole.Arn
+      Runtime: python3.12
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: update_article
+            Method: PUT
+      Environment:
+        Variables:
+          TableName: !Ref pTableName
+      LoggingConfig:
+        LogGroup: !Ref ArticlesCRUDLogGroupGL
+    DependsOn:
+      - UpdateArticlesRole
+
+  DeleteArticlesLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref pDeleteArticle
+      CodeUri: s3://articlescrudlambdascg/delete_articles.zip
+      Handler: delete_articles.lambda_handler
+      Role: !GetAtt DeleteArticlesRole.Arn
+      Runtime: python3.12
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: delete_article
+            Method: DELETE
+      Environment:
+        Variables:
+          TableName: !Ref pTableName
+      LoggingConfig:
+        LogGroup: !Ref ArticlesCRUDLogGroupGL
+    DependsOn:
+      - DeleteArticlesRole
+  
+  ConfigLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+    - ApiGatewayApi
+    - AllArticlesLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AllArticlesLambda
+      Principal: apigateway.amazonaws.com
+
+  SingleArticlePermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+    - ApiGatewayApi
+    - GetSingleArticleLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GetSingleArticleLambda
+      Principal: apigateway.amazonaws.com
+
+  CreateArticlePermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+    - ApiGatewayApi
+    - CreateArticlesLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CreateArticlesLambda
+      Principal: apigateway.amazonaws.com
+
+  UpdateArticlePermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+    - ApiGatewayApi
+    - UpdateArticlesLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref UpdateArticlesLambda
+      Principal: apigateway.amazonaws.com
+
+  DeleteArticlePermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+    - ApiGatewayApi
+    - DeleteArticlesLambda
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DeleteArticlesLambda
+      Principal: apigateway.amazonaws.com
