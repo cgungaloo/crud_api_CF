@@ -68,6 +68,19 @@ Resources:
       GroupDescription: "Security group for Lambda function"
       VpcId: !Ref CRUDVPC
 
+  DynamoDBEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      ServiceName: !Sub "com.amazonaws.eu-west-1.dynamodb"
+      VpcId: !Ref CRUDVPC
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - !Ref SubnetA
+        - !Ref SubnetB
+      SecurityGroupIds:
+        - !Ref CrudSecurityGroup
+
+
   ArticlesTable:
     Type: AWS::DynamoDB::Table
     Properties:
