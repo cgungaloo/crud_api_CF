@@ -2,6 +2,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+  pName:
+    Type: String
+    Default: articlescrud
   pTableName:
     Type: String
     Default: articles
@@ -54,13 +57,10 @@ Resources:
       AvailabilityZone: !Select [0, !GetAZs ""]
       VpcId: !Ref CRUDVPC
       CidrBlock: !Ref pSubnetACIDR
+      Tags:
+        - Key: Name
+          Value: !Sub "${pName}-subnet-cg"
 
-  SubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: !Select [1, !GetAZs ""]
-      VpcId: !Ref CRUDVPC
-      CidrBlock: !Ref pSubnetBCIDR
 
   CrudSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -68,14 +68,28 @@ Resources:
       GroupDescription: "Security group for Lambda function"
       VpcId: !Ref CRUDVPC
 
+  
+  rRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CRUDVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${pName}-route-table"
+
+  rSubnetRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref rRouteTable
+      SubnetId: !Ref SubnetA
+
   DynamoDBEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      ServiceName: !Sub "com.amazonaws.us-east-1.dynamodb"
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
       VpcId: !Ref CRUDVPC
       VpcEndpointType: Gateway
-      # SecurityGroupIds:
-      #   - !Ref CrudSecurityGroup
+      RouteTableIds: [ !Ref rRouteTable ]
 
 
   ArticlesTable:
