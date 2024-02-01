@@ -71,14 +71,11 @@ Resources:
   DynamoDBEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      ServiceName: !Sub "com.amazonaws.eu-west-1.dynamodb"
+      ServiceName: !Sub "com.amazonaws.us-east-1.dynamodb"
       VpcId: !Ref CRUDVPC
-      VpcEndpointType: Interface
-      SubnetIds: 
-        - !Ref SubnetA
-        - !Ref SubnetB
-      SecurityGroupIds:
-        - !Ref CrudSecurityGroup
+      VpcEndpointType: Gateway
+      # SecurityGroupIds:
+      #   - !Ref CrudSecurityGroup
 
 
   ArticlesTable:
