@@ -34,13 +34,14 @@ Parameters:
     Type: String
     Description: "CIDR block for Subnet A"
     Default: "10.0.1.0/24"
-  pSubnetBCIDR:
+  pRetentionInDays:
+    Type: Number
+    Default: 7
+  pBucketName:
     Type: String
-    Description: "CIDR block for Subnet B"
-    Default: "10.0.2.0/24"
+    Default: "articlescrudlambdascg"
 
 Resources:
-
   CRUDVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -109,20 +110,6 @@ Resources:
         ReadCapacityUnits: "10"
         WriteCapacityUnits: "5"
       
-
-  ArticlesCRUDRole:
-    Type: "AWS::IAM::Role"
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - "dynamodb.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      Path: "/"
   
   ApiGatewayApi:
     Type: AWS::Serverless::Api
@@ -135,7 +122,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: "/aws/lambda/articles_grp_gl"
-      RetentionInDays: 7
+      RetentionInDays: !Ref pRetentionInDays
 
   AllArticlesRole:
     Type: "AWS::IAM::Role"
@@ -171,6 +158,10 @@ Resources:
                   - 'ec2:DescribeInstances'
                   - 'ec2:AttachNetworkInterface'
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject*'
+                Resource: !Sub "arn:aws:s3:::${pBucketName}/get_all_articles.zip"
 
   SingleArticlesRole:
     Type: "AWS::IAM::Role"
@@ -198,6 +189,10 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject*'
+                Resource: !Sub "arn:aws:s3:::${pBucketName}/get_single_article.zip"
   
   CreateArticlesRole:
     Type: "AWS::IAM::Role"
@@ -225,6 +220,10 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject*'
+                Resource: !Sub "arn:aws:s3:::${pBucketName}/create_articles.zip"
 
   
   UpdateArticlesRole:
@@ -254,6 +253,11 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject*'
+                Resource: !Sub "arn:aws:s3:::${pBucketName}/update_articles.zip"
+
 
   DeleteArticlesRole:
     Type: "AWS::IAM::Role"
@@ -281,12 +285,19 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject*'
+                Resource: !Sub "arn:aws:s3:::${pBucketName}/delete_articles.zip"
+
 
   AllArticlesLambda:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Ref pGetAllArticles
-      CodeUri: s3://articlescrudlambdascg/get_all_articles.zip
+      CodeUri: 
+        Bucket: !Ref pBucketName
+        Key: get_all_articles.zip
       Handler: get_all_articles.lambda_handler
       Role: !GetAtt AllArticlesRole.Arn
       Runtime: python3.12
@@ -302,7 +313,6 @@ Resources:
           - !Ref CrudSecurityGroup
         SubnetIds:
           - !Ref SubnetA
-
       Environment:
         Variables:
           TableName: !Ref pTableName
@@ -315,7 +325,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Ref pGetSingleArticle
-      CodeUri: s3://articlescrudlambdascg/get_single_article.zip
+      CodeUri: 
+        Bucket: !Ref pBucketName
+        Key: get_single_article.zip
       Handler: get_single_article.lambda_handler
       Role: !GetAtt SingleArticlesRole.Arn
       Runtime: python3.12
@@ -338,7 +350,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Ref pCreateArticle
-      CodeUri: s3://articlescrudlambdascg/create_articles.zip
+      CodeUri: 
+        Bucket: !Ref pBucketName
+        Key: create_articles.zip
       Handler: create_articles.lambda_handler
       Role: !GetAtt CreateArticlesRole.Arn
       Runtime: python3.12
@@ -361,7 +375,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Ref pUpdateArticle
-      CodeUri: s3://articlescrudlambdascg/update_articles.zip
+      CodeUri: 
+        Bucket: !Ref pBucketName
+        Key: update_articles.zip
       Handler: update_articles.lambda_handler
       Role: !GetAtt UpdateArticlesRole.Arn
       Runtime: python3.12
@@ -384,7 +400,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Ref pDeleteArticle
-      CodeUri: s3://articlescrudlambdascg/delete_articles.zip
+      CodeUri: 
+        Bucket: !Ref pBucketName
+        Key: delete_articles.zip
       Handler: delete_articles.lambda_handler
       Role: !GetAtt DeleteArticlesRole.Arn
       Runtime: python3.12
