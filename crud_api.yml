@@ -40,6 +40,9 @@ Parameters:
   pBucketName:
     Type: String
     Default: "articlescrudlambdascg"
+  pCloudWatchEmail:
+    Type: String
+    Default: "chris.gungaloo@globallogic.com"
 
 Resources:
   CRUDVPC:
@@ -123,6 +126,8 @@ Resources:
     Properties:
       LogGroupName: "/aws/lambda/articles_grp_gl"
       RetentionInDays: !Ref pRetentionInDays
+    DependsOn: 
+      - ArticlesCrudSNSTopic
 
   AllArticlesRole:
     Type: "AWS::IAM::Role"
@@ -320,6 +325,7 @@ Resources:
         LogGroup: !Ref ArticlesCRUDLogGroupGL
     DependsOn:
       - AllArticlesRole
+
   
   GetSingleArticleLambda:
     Type: AWS::Serverless::Function
@@ -470,3 +476,37 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref DeleteArticlesLambda
       Principal: apigateway.amazonaws.com
+
+  ArticlesCrudSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint: !Ref pCloudWatchEmail
+        Protocol: email
+
+  ArticlesCrudMetrics: 
+    Type: AWS::Logs::MetricFilter
+    DependsOn: ArticlesCrudSNSTopic
+    Properties: 
+      LogGroupName: !Ref "ArticlesCRUDLogGroupGL"
+      FilterPattern: '[ERROR, error]'
+      MetricTransformations: 
+        - MetricValue: '1'
+          MetricNamespace: 'Errors'
+          MetricName: 'ErrorCount'
+
+  ArticlesCRUDErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: ArticlesCrudMetrics
+    Properties:
+      AlarmName: ArticlesCrudErrorAlarm
+      AlarmActions: 
+        - !Ref ArticlesCrudSNSTopic
+      MetricName: ArticlesCrudMetrics
+      Namespace: LogMetrics
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      Period: '900'
+      Statistic: Sum
+      Threshold: '1'
+      TreatMissingData: breaching
