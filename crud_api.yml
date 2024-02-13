@@ -483,6 +483,8 @@ Resources:
       Subscription:
       - Endpoint: !Ref pCloudWatchEmail
         Protocol: email
+      - Endpoint: 'simon.hanmer@globallogic.com'
+        Protocol: email
 
   ArticlesCrudMetrics: 
     Type: AWS::Logs::MetricFilter
@@ -502,11 +504,11 @@ Resources:
       AlarmName: ArticlesCrudErrorAlarm
       AlarmActions: 
         - !Ref ArticlesCrudSNSTopic
-      MetricName: ArticlesCrudMetrics
-      Namespace: LogMetrics
+      MetricName: ErrorCount
+      Namespace: Errors
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: '1'
       Period: '900'
       Statistic: Sum
       Threshold: '1'
-      TreatMissingData: breaching
+      TreatMissingData: notBreaching
