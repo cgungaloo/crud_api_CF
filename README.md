@@ -27,4 +27,11 @@ For this Project I use
     - AWS CloudWatch and CloudAlarm
     - AWS API Gateway
 
+# Implementation
+
+I orginally started out this  project by building it manually withing AWS. Once I got it working I then implemented it cloudformation.
+Here I will try to demonstrate the key components side by side.
+
+
+
 
