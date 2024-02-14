@@ -119,3 +119,33 @@ def lambda_handler(event, context):
 I start by declaring the function name *"lambda_hander"*. This can be any name but its important as it will be used to in the cloudformation script as a reference
 A logger is also intialised and set to INFO so that we can log aspects of the function at runtime.
 
+We then need to intialise an object that represent resources in AWS. In this case, as we are interacting with dyanmoDB, we need an instantiation of dynamoDB. We use boto3 to do this.
+
+```python
+    client = boto3.resource('dynamodb')
+
+    table = client.Table(os.environ['TableName'])
+```
+
+We then use the instantiation to then instantiat a table inside dynamoDB. The table name is 'articles' this is passed in as an environment variable which I set up on my machine (In Cloudformation we set up this environment variable)
+
+Once established we then use the table.put_item to take the data from the *event* function input. This variable comes from the lambda function and will contain the inputs from the API endpoint.
+
+put_item expects an *Item* input. I populate this using the *queryStringParameters* which comes from *event*. Each value in *Item* will be a field in the articles table.
+
+I also raise some ClientExceptions and KeyError exceptions in the event that boto3 fails or if the input does not contain the the DB fields I expect.
+
+Once the put_item function successfully runs, I then return the response in the form of a dictionary as *http_res*
+
+This function will be used by our API gateway to create articles. Its a function that will be called once the PUT request is made. I personally appreciated the modular approach that AWS lambdas lends itself to. You'll later see how it gets integrated to the API gateway.
+
+As you can see in the repo I repeat this process for other CRUD operations but use different boto3 functions. In *lambdas/get_all_articles.py* for example, I use the scan function to read data.
+Each function essentially follows the principle of Intialising AWS resources with boto3, attempting to interact with the dynamoDB table, raising exceptions in the event of a failure, return a http response object as JSON. Check out each of the functions in the lambdas directory.
+
+## Unit Testing
+
+To Ensure the quality of each lambda function I introduced unit testing for both positive and negative cases.
+
+
+
+
