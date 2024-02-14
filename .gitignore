@@ -1,3 +1,4 @@
 envaws
 *.pyc
 *.zip
+.DS_Store
