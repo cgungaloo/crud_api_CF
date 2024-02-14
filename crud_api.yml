@@ -482,9 +482,7 @@ Resources:
     Properties:
       Subscription:
       - Endpoint: !Ref pCloudWatchEmail
-        Protocol: email
-      - Endpoint: 'simon.hanmer@globallogic.com'
-        Protocol: email
+        Protocol: email-json
 
   ArticlesCrudMetrics: 
     Type: AWS::Logs::MetricFilter
@@ -510,5 +508,5 @@ Resources:
       EvaluationPeriods: '1'
       Period: '900'
       Statistic: Sum
-      Threshold: '1'
+      Threshold: '3'
       TreatMissingData: notBreaching
