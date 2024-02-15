@@ -21,7 +21,7 @@ This post goes into the Technologies I used and the implementation.
 Ive tried to implement a solution that automates as much as possible as well as build an API that us unit tested.
 I encourage you to go through the repo and explore the implementation.
 
-Github repo:
+Github repo: https://github.com/cgungaloo/crud_api_CF
 
 ## Technologies
 
