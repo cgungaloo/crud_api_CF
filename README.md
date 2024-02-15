@@ -127,7 +127,7 @@ We then need to intialise an object that represent resources in AWS. In this cas
     table = client.Table(os.environ['TableName'])
 ```
 
-We then use the instantiation to then instantiat a table inside dynamoDB. The table name is 'articles' this is passed in as an environment variable which I set up on my machine (In Cloudformation we set up this environment variable)
+We then use the instantiation to then instantiate a table inside dynamoDB. The table name is 'articles' this is passed in as an environment variable which I set up on my machine (In Cloudformation we set up this environment variable)
 
 Once established we then use the table.put_item to take the data from the *event* function input. This variable comes from the lambda function and will contain the inputs from the API endpoint.
 
@@ -144,7 +144,7 @@ Each function essentially follows the principle of Intialising AWS resources wit
 
 ## Unit Testing
 
-To Ensure the quality of each lambda function I introduced unit testing for both positive and negative cases. The following is an example of a postive test case for get_all_articles
+To Ensure the quality of each lambda function I introduced unit testing for both positive and negative cases. The following is an example of a postive test case for get_all_articles in lambdas/tests/test_crud_articles.py
 
 ```python
 class Test(TestCase):
@@ -191,3 +191,78 @@ I also assert the boto3.resource('dynamod').Table('articles').scan function was 
 
 I also assert the status code, headers and the body of the HTTP response dictionary.
 
+## Negative Tests.
+
+I also wrote test to assert that exceptions are raised when they should be.
+
+```python
+    @patch("boto3.resource")
+    def test_get_all_key_error(self, mock_resource):
+        event = {"queryStringParameters": 
+                    {"badkey":"mytitle"}}
+        context = "context_test"
+
+        response = get_all_lambda(event, context)
+
+        assert response['statusCode'] == 400
+        assert response['headers']['Content-Type'] == 'application/json'
+        assert response['body'] == '"Got Key Error: \'title\'"'
+```
+
+In this test I put a bad key into the event input. I then run the function and assert we get a 400 error via the KeyError exception.
+I still mock the boto3.resource to precvent external calls to AWS.
+
+## Stubber.
+In order to trigger a ClientError exception, we need to simulate boto3 failing e.g. when it fails to connect. To do this we use the botocore Stubber class to create an exception. This is used to tell boto3 to trigger a client exception rather than run normally.
+
+```python
+    def test_create_client_error(self):
+        event = {"queryStringParameters": 
+                    {"title":"mytitle",
+                     "description":"mydescription"}}
+        context = LambdaContext()
+
+        db_resource = boto3.resource('dynamodb')
+        resource_stubber = Stubber(db_resource.meta.client)
+
+        resource_stubber.add_client_error('put_item','LimitExceededException')
+        resource_stubber.activate()
+
+        with mock.patch('boto3.resource', mock.MagicMock(return_value=db_resource)):
+            response = create_lambda(event, context)
+            assert response['body'] == '"Got ClientError: An error occurred (LimitExceededException) when calling the PutItem operation: "'
+            assert response['statusCode'] == 500
+```
+
+## Explanation
+
+we map the ```boto3.resource('dynamodb')``` resource to a Stubber class with ```Stubber(db_resource.meta.client)```. Using the Stubber class we can then map an error to a function of interest, put_item. ```resource_stubber.add_client_error('put_item','LimitExceededException')```
+
+After activating the Stubber we can mock boto3 resource and run our create_lambda function. When this runs, the Stubber will trigger our client_error which in turn is caught by the ClientError exception specified in the create_lambda function.
+I can then assert the custom message in the response body.
+
+## Test with LambdaContext
+
+AWS Lambdas have a default context as a function parameter. This context contents aws specific data which is used in some of the functions. I use to to get the aws_request_id
+
+```python
+ @patch("boto3.resource")
+    def test_create_article(self, mock_resource):
+        event = {"queryStringParameters": 
+                    {"title":"mytitle",
+                     "description":"mydescription"}}
+        context = LambdaContext()
+
+        ...
+```
+
+in lambdas/tests/test_helpers/lambda_context.py
+
+```python
+class LambdaContext:
+    aws_request_id = 'abc123'
+```
+
+I create my own lambda context with a fake aws_request_id and use it in my test_create_article function. I can the assert the response bidy returns the correct ID based off the input.
+
+You can explore all the unit tests in *lambdas/tests/test_crud_articles.py*
