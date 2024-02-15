@@ -114,7 +114,7 @@ def lambda_handler(event, context):
 
 ```
 
-## Explanation
+### Explanation
 
 I start by declaring the function name *"lambda_hander"*. This can be any name but its important as it will be used to in the cloudformation script as a reference
 A logger is also intialised and set to INFO so that we can log aspects of the function at runtime.
@@ -144,8 +144,50 @@ Each function essentially follows the principle of Intialising AWS resources wit
 
 ## Unit Testing
 
-To Ensure the quality of each lambda function I introduced unit testing for both positive and negative cases.
+To Ensure the quality of each lambda function I introduced unit testing for both positive and negative cases. The following is an example of a postive test case for get_all_articles
 
+```python
+class Test(TestCase):
 
+    def setUp(self):
+        os.environ["TableName"] = "articles"
+    
+    @patch("boto3.resource")
+    def test_get_all_articles(self, mock_resource):
+        event = {"queryStringParameters": 
+                    {"title":"mytitle"}}
+        context = "context_test"
 
+        mock_table = Mock()
+        mock_table.scan.return_value = {'Items':'responseval'}
+        mock_resource.return_value.Table.return_value = mock_table
+        response = get_all_lambda(event,context)
+
+        mock_resource.return_value.Table.assert_called_with('articles')
+        mock_table.scan.assert_called_with(
+            FilterExpression= Attr('title').begins_with("mytitle")
+        )
+
+        assert response['statusCode'] == 200
+        assert response['headers']['Content-Type'] == 'application/json'
+        assert response['body'] == '"responseval"'
+```
+
+### Explanation
+Because this is unit test we do not want to perform any real interactions with AWS resources. This could cause adverse affects to our infrastructure which would essentially become an E2E test. I therefore mock the boto3.resource to avoid external calls. In this test Im only interested in checking the function works, not dynamoDB.
+
+To set up the mock I create a fake event and populate it with  queryStringParameters. I put a title in the dictionary.
+
+We then mock the Mock.scan function by assigning its return value with a fake response. This is done using the .return_value function from the unittest framework.
+
+The mock is then assigned as a return value to the Table instantiation. This because Table is an object instatiation rather than a function.
+
+With the mock set up we can run our function, *get_all_lambda*. When the function runs any references to Table and scan are replaced with out mock and the fake response is returned.
+
+Once the function has completed we can then run some assertions.
+I assert theat the Table instation has been called with 'artcles' (set by the environment variable in setUp) as a parameter.
+
+I also assert the boto3.resource('dynamod').Table('articles').scan function was called with the filter expression 'title'. The input for the filter expression came from the fake event specified in the test.
+
+I also assert the status code, headers and the body of the HTTP response dictionary.
 
