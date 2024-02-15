@@ -266,3 +266,114 @@ class LambdaContext:
 I create my own lambda context with a fake aws_request_id and use it in my test_create_article function. I can the assert the response bidy returns the correct ID based off the input.
 
 You can explore all the unit tests in *lambdas/tests/test_crud_articles.py*
+
+# CloudFormation
+
+*crud_api.yml* Is the CloudFormation script used to deploy our put everything together including the lambdas.
+
+I will go through the key aspects of the scripts.
+
+## VPC
+Our entire deployment will be in a custom VPC. A default VPC is provided to your AWS account but I added it to demonstrate how you can use CloudFormation to create one.
+
+```yaml
+Resources:
+  CRUDVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref pVpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: ArticlesCRUD_CG_GL
+```
+
+The CidrBlock is the Classless Inter-Domain Routing for IPv4. This is the IP address range. I the ```pVpcCIDR``` variable is defined in the scripts paramters section as 10.0.0.0/16 which will be 10.0.0.0 - 10.255.255.255
+
+I also create a subnet inside the VPC ip address range.
+
+```yaml
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      VpcId: !Ref CRUDVPC
+      CidrBlock: !Ref pSubnetACIDR
+      Tags:
+        - Key: Name
+          Value: !Sub "${pName}-subnet-cg"
+
+```
+
+Here the CIDR block 10.0.1.0/24  which is 10.0.1.1 to 10.0.1.254 (excluding broadcast and network address). I also create a Route Table for the VPC.
+I also create a security group for lambda functions and assign it to the VPC,
+
+```yaml
+  CrudSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for Lambda function"
+      VpcId: !Ref CRUDVPC
+
+ rRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CRUDVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${pName}-route-table"
+
+  rSubnetRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref rRouteTable
+      SubnetId: !Ref SubnetA
+```
+
+
+<img src="images/vpc_diagram.png" height=200 width=800>
+
+## DynamoDB:
+I then define the dynamoDB data base and set the articles table. In order for the lambda functions to access it in the custom VPC I also need to create a VPC endppoint for it to be accessible.
+
+```yaml
+
+  DynamoDBEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      VpcId: !Ref CRUDVPC
+      VpcEndpointType: Gateway
+      RouteTableIds: [ !Ref rRouteTable ]
+
+  ArticlesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref pTableName
+      AttributeDefinitions:
+        - AttributeName: !Ref pAttributeName
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: !Ref pAttributeName
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ExpirationTime"
+        Enabled: true
+      ProvisionedThroughput:
+        ReadCapacityUnits: "10"
+        WriteCapacityUnits: "5"
+
+```
+
+The result is the creation of the table in dynamo DB and a vpc endpoint for it.
+
+In DynamoDB
+<img src="images/dynamodb_table.png">
+
+VPC endpoint
+<img src="images/vpc_endpoint.png">
+
+## ApiGateway
+
+The api gets defined as a serverless resource.
