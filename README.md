@@ -12,11 +12,11 @@
 
 ## Introduction
 
-As part of my onboarding to a finance client I was required to learn some AWS skills. I have only dabbled with AWS as a hobby and never used it directly on a project.
+As part of my onboarding to a financial services client, I needed to expand my AWS skill set as I've only previously has limited exposure to AWS services (Cloud formation, lambdas etc).
 
-To up skill for this role I created a REST API using AWS resources and deployed it into a VPC via Cloud formation.
+To up skill for this role I created a REST API CRUD application using AWS resources and deployed it into a VPC via Cloud formation.
 
-This post goes into the Technologies I used and the implementation.
+This post goes into the technologies I used and the implementation.
 
 Ive tried to implement a solution that automates as much as possible as well as build an API that us unit tested.
 I encourage you to go through the repo and explore the implementation.
@@ -48,7 +48,7 @@ Here I will try to demonstrate the key components side by side.
 
 This is  a simplified diagram of the application and how its deployed in AWS.
 
-<img src="images/sysarch.jpg">
+<img src="images/articlescrudarch.jpg">
 <br/>
 <br/>
 
@@ -535,6 +535,6 @@ I run the cloudformation script in AWS by uploading it. Once complete a stack is
 
 This project as a good head first introduction to AWS and cloud formation as well as using boto3. I was introduced to a good range of AWS resources.
 I got a lot of good feed back from Global Logic people to help with best practices.
-I would improve on this by introducing CICD to automatically redeploy the resources and Create and upload zip files to AWS.
+I would improve on this by introducing CI/CD to automatically redeploy the resources and Create and upload zip files to AWS.
 
 Thanks for reading and I wish you all the best in your AWS journey.
