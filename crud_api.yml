@@ -196,6 +196,14 @@ Resources:
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
               - Effect: Allow
                 Action:
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:AttachNetworkInterface'
+                Resource: '*'
+              - Effect: Allow
+                Action:
                   - 's3:GetObject*'
                 Resource: !Sub "arn:aws:s3:::${pBucketName}/get_single_article.zip"
   
@@ -225,6 +233,14 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:AttachNetworkInterface'
+                Resource: '*'
               - Effect: Allow
                 Action:
                   - 's3:GetObject*'
@@ -260,6 +276,14 @@ Resources:
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
               - Effect: Allow
                 Action:
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:AttachNetworkInterface'
+                Resource: '*'
+              - Effect: Allow
+                Action:
                   - 's3:GetObject*'
                 Resource: !Sub "arn:aws:s3:::${pBucketName}/update_articles.zip"
 
@@ -290,6 +314,14 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                 Resource: !GetAtt ArticlesCRUDLogGroupGL.Arn
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:AttachNetworkInterface'
+                Resource: '*'
               - Effect: Allow
                 Action:
                   - 's3:GetObject*'
@@ -344,6 +376,11 @@ Resources:
             RestApiId: !Ref ApiGatewayApi
             Path: get_single_article
             Method: GET 
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CrudSecurityGroup
+        SubnetIds:
+          - !Ref SubnetA
       Environment:
         Variables:
           TableName: !Ref pTableName
@@ -369,6 +406,11 @@ Resources:
             RestApiId: !Ref ApiGatewayApi
             Path: create_article
             Method: PUT
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CrudSecurityGroup
+        SubnetIds:
+          - !Ref SubnetA
       Environment:
         Variables:
           TableName: !Ref pTableName
@@ -394,6 +436,11 @@ Resources:
             RestApiId: !Ref ApiGatewayApi
             Path: update_article
             Method: PUT
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CrudSecurityGroup
+        SubnetIds:
+          - !Ref SubnetA
       Environment:
         Variables:
           TableName: !Ref pTableName
@@ -419,6 +466,11 @@ Resources:
             RestApiId: !Ref ApiGatewayApi
             Path: delete_article
             Method: DELETE
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CrudSecurityGroup
+        SubnetIds:
+          - !Ref SubnetA
       Environment:
         Variables:
           TableName: !Ref pTableName
