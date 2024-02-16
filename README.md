@@ -533,8 +533,8 @@ I run the cloudformation script in AWS by uploading it. Once complete a stack is
 
 # Conclusion
 
-This project as a good head first introduction to AWS and cloud formation as well as using boto3. I was introduced to a good range of AWS resources.
+This project was a good head first introduction to AWS and cloud formation as well as using boto3. I was introduced to a good range of AWS resources.
 I got a lot of good feed back from Global Logic people to help with best practices.
-I would improve on this by introducing CI/CD to automatically redeploy the resources and Create and upload zip files to AWS.
+I would improve on this by introducing CI/CD to automatically redeploy the resources and Create and upload zip files to S3.
 
 Thanks for reading and I wish you all the best in your AWS journey.
