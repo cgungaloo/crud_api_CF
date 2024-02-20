@@ -42,7 +42,7 @@ Parameters:
     Default: "articlescrudlambdascg"
   pCloudWatchEmail:
     Type: String
-    Default: "chris.gungaloo@globallogic.com"
+    Default: "abc@123.com"
 
 Resources:
   CRUDVPC:
